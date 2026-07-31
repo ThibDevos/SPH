@@ -4,6 +4,7 @@
 #include <annexes_functions.h>
 #include <kernel_functions.h>
 #include <sph_functions.h>
+#include <morton.h>
 
 #include <filesystem>
 #include <fstream>
@@ -55,6 +56,12 @@ void write_particles_vtu(const std::vector<Particle<2>>& particles,
   }
   file << "        </DataArray>\n";
 
+  file << "        <DataArray type=\"Float64\" Name=\"leaf\" format=\"ascii\">\n";
+  for (const auto& particle : particles) {
+    file << "          " << std::setprecision(17) << particle.leaf << '\n';
+  }
+  file << "        </DataArray>\n";
+
   file << "        <DataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\" format=\"ascii\">\n";
   for (const auto& particle : particles) {
     file << "          " << std::setprecision(17) << particle.velocity[0] << ' ' << particle.velocity[1]
@@ -97,37 +104,66 @@ void write_particles_vtu(const std::vector<Particle<2>>& particles,
 
 int main()
 {
-  std::vector<Particle<2>> particles(1000);
+
+  std::ofstream f;
+  f.open("2592_h.txt");
+
+  std::vector<Particle<2>> particles(2592);
 
   std::array<double, 2> dam_bot_left{0.0, 0.0};
-  std::array<double, 2> dam_top_right{0.5, 0.8};
-  double dx = 0.02;
+  std::array<double, 2> dam_top_right{0.146, 0.292};
+  double dx = 0.004;
 
   std::array<double, 2> dom_bot_left{0.0, 0.0};
-  std::array<double, 2> dom_top_right{2.0, 1.0};
+  std::array<double, 2> dom_top_right{0.45, 0.35};
 
   init_grid_block(dam_bot_left, dam_top_right, dx, particles);
-  // search_neighbour(particles);
-
-  double T = 10.;
+ 
+  std::chrono::steady_clock::time_point begin;
+  std::chrono::steady_clock::time_point end;
+  auto time =  std::chrono::duration_cast<std::chrono::microseconds>(begin - begin).count();
+  auto total_time = time;
+  // int i = 0;
+  // for(auto p : particles)
+  // {
+  //   std::cout<<i<<" has "<<p.neighbours.size()<<" neighbour"<<std::endl;
+  //   for(auto q : p.neighbours)
+  //   {
+  //     std::cout<<"      "<<distance(p,*q)<<std::endl;
+  //   }
+  //   std::cout<<std::endl;
+  //   ++i;
+  // }
+  // exit(0);
+  double T = 2;
   double t = 0.0;
   int count = 0;
   int count_files = 0;
-  int save_freq = 100;
+  int save_freq = 300;
   while (t < T)
   {
     std::cout << t << "/" << T << std::endl;
+    begin = std::chrono::steady_clock::now();
+    Morton<2> M(particles, H);
+    end = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    f<<time<<" ";
+    begin = std::chrono::steady_clock::now();
     compute_density_pressure(particles);
     compute_forces(particles);
+    end = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    f<<time<<std::endl;
+    
     update(particles);
     check_boundaries(particles, dom_bot_left, dom_top_right);
     if (count % save_freq == 0)
     {
 
       const std::filesystem::path output_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path() / "bin" / (std::string("particles_") + std::to_string(count_files) + ".vtp");
-      count_files++;
-      write_particles_vtu(particles, output_path.string());
+          std::filesystem::path(__FILE__).parent_path().parent_path() / "bin" / (std::string("particles_h_") + std::to_string(count_files) + ".vtp");
+          count_files++;
+          write_particles_vtu(particles, output_path.string());
     }
     ++count;
     t += DT;
