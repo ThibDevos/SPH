@@ -118,7 +118,7 @@ class Morton
         }
       }
       //use max and min to determine l
-      l = (int)std::floor(std::log(Max / (1.1*h)) / std::log(2));
+      l = (int)std::floor(std::log(Max / (2*h)) / std::log(2));
       std::cout << "l = " << l << std::endl;
     }
 
