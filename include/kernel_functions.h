@@ -1,6 +1,7 @@
 #ifndef KERNEL_FUNCTIONS
 #define KERNEL_FUNCTIONS
 
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <numbers>
@@ -16,16 +17,25 @@ struct cubic_spline
       static_assert(D<=3, "Dimension should be <=3");
   }();
 
+  inline static double h_pow_D = 0;
+  inline static double h_pow_DP1 = 0;
+
+  cubic_spline(double h)
+  {
+    h_pow_D = std::pow(h,D);
+    h_pow_DP1 = std::pow(h,D+1);
+  }
+
   static double eval(double dist, double h)
   {
     double q = dist / h;
     if (q < 1)
     {
-      return 1 / std::pow(h, D) * a * (2. / 3. - q * q + 0.5 * q * q * q);
+      return 1 / h_pow_D * a * (2. / 3. - q * q + 0.5 * q * q * q);
     }
     if (q < 2)
     {
-      return 1 / std::pow(h, D) * a * 1. / 6. * std::pow(2 - q, 3);
+      return 1 / h_pow_D * a * 1. / 6. * (2-q)*(2-q)*(2-q);
     }
     return 0;
   }
@@ -38,7 +48,7 @@ struct cubic_spline
     if (dist == 0.)
       return {};
 
-    double coef = a * 1. / std::pow(h, D + 1) / dist;
+    double coef = a * 1. / h_pow_DP1 / dist;
     double q = dist / h;
     if (q < 1)
     {

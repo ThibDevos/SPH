@@ -15,6 +15,17 @@ double distance(Particle<D> const & p, Particle<D> const & q)
   }
   return std::sqrt(res);
 }
+template<size_t D>
+double sq_distance(Particle<D> const & p, Particle<D> const & q)
+{
+  double res = 0.;
+  for (std::size_t i = 0; i < D; ++i)
+  {
+    const double diff = p.position[i] - q.position[i];
+    res += diff * diff;
+  }
+  return std::sqrt(res);
+}
 
 template<size_t D, typename T> 
 inline double norm(T a)

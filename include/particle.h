@@ -1,6 +1,8 @@
 #ifndef PARTICLE
 #define PARTICLE
 
+#include <constants.h>
+
 #include <iostream>
 
 #include <array>
@@ -15,7 +17,7 @@ struct Particle
   std::array<double, D> forces;
   double pressure;
   double density;
-  double mass = 0.016;
+  double mass = sph::constants().MASS;
 
   std::vector<Particle<D>*> neighbours;
   int boundary = 0; // boundary \in [0,63], such that, each bit correspond to a boundary and is 1 if the leaf is close to it.

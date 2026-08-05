@@ -102,70 +102,109 @@ void write_particles_vtu(const std::vector<Particle<2>>& particles,
   file << "</VTKFile>\n";
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  std::size_t particle_count = 1000;
+  std::string neighbouring = "morton";
+  std::string file_name_time;
+  std::string file_name_vtp;
+  if (argc > 1)
+  {
+    particle_count = static_cast<std::size_t>(std::stoul(argv[1]));
+    if (argc >2)
+      neighbouring = argv[2];
+  }
+  if(neighbouring!="morton" || neighbouring !="naive")
+    std::runtime_error("Choose between morton and naive");
+  
+  sph::configure(particle_count);
+  
+  std::cout << "Running simulation with " << particle_count << " target particles"
+  << " (actual grid: " << sph::constants().actual_particle_count << ")"
+  << std::endl;
+  
+  file_name_vtp = neighbouring + "_"+ std::to_string(sph::constants().actual_particle_count);
+  file_name_time = file_name_vtp + ".dat";
+  std::ofstream f_time;
+  f_time.open(file_name_time);
 
-  std::ofstream f;
-  f.open("2592_h.txt");
-
-  std::vector<Particle<2>> particles(2592);
+  std::vector<Particle<2>> particles(sph::constants().actual_particle_count);
 
   std::array<double, 2> dam_bot_left{0.0, 0.0};
   std::array<double, 2> dam_top_right{0.146, 0.292};
-  double dx = 0.004;
+  const double dx = sph::constants().dx;
 
   std::array<double, 2> dom_bot_left{0.0, 0.0};
-  std::array<double, 2> dom_top_right{0.45, 0.35};
+  std::array<double, 2> dom_top_right{0.584, 0.35};
 
   init_grid_block(dam_bot_left, dam_top_right, dx, particles);
  
   std::chrono::steady_clock::time_point begin;
   std::chrono::steady_clock::time_point end;
-  auto time =  std::chrono::duration_cast<std::chrono::microseconds>(begin - begin).count();
-  auto total_time = time;
-  // int i = 0;
-  // for(auto p : particles)
-  // {
-  //   std::cout<<i<<" has "<<p.neighbours.size()<<" neighbour"<<std::endl;
-  //   for(auto q : p.neighbours)
-  //   {
-  //     std::cout<<"      "<<distance(p,*q)<<std::endl;
-  //   }
-  //   std::cout<<std::endl;
-  //   ++i;
-  // }
-  // exit(0);
+  auto time_initialisation =  std::chrono::duration_cast<std::chrono::microseconds>(begin - begin).count();
+  auto time_computation = time_initialisation;
+
+
+
+  //naive
+  if(neighbouring=="naive")
+  {
+    for(auto & p : particles)
+    {
+      p.neighbours.clear();
+      for(auto & q : particles)
+      {
+        p.neighbours.push_back(&q);
+      }
+    }
+  }
+
   double T = 2;
   double t = 0.0;
   int count = 0;
   int count_files = 0;
-  int save_freq = 300;
+  int save_freq = 500;
+
+  cubic_spline<2> kernel_init(sph::constants().H);
+
   while (t < T)
   {
     std::cout << t << "/" << T << std::endl;
-    begin = std::chrono::steady_clock::now();
-    Morton<2> M(particles, H);
-    end = std::chrono::steady_clock::now();
-    time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    f<<time<<" ";
-    begin = std::chrono::steady_clock::now();
-    compute_density_pressure(particles);
-    compute_forces(particles);
-    end = std::chrono::steady_clock::now();
-    time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    f<<time<<std::endl;
+
+    if(neighbouring=="morton")
+    {
+      begin = std::chrono::steady_clock::now();
+        Morton<2> M(particles, sph::constants().H);
+      end = std::chrono::steady_clock::now();
+      time_initialisation = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    }
+    else
+    {
+      time_initialisation = 0.;
+    }
     
+    
+    
+    begin = std::chrono::steady_clock::now();
+      compute_density_pressure(particles);
+      compute_forces(particles);
+    end = std::chrono::steady_clock::now();
+    time_computation = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    
+    f_time << t<<" "<<time_initialisation<<" "<<time_computation<<" "<<time_initialisation+time_computation<<"\n";
+
     update(particles);
     check_boundaries(particles, dom_bot_left, dom_top_right);
-    if (count % save_freq == 0)
-    {
+    //  if (count % save_freq == 0)
+    //  {
 
-      const std::filesystem::path output_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path() / "bin" / (std::string("particles_h_") + std::to_string(count_files) + ".vtp");
-          count_files++;
-          write_particles_vtu(particles, output_path.string());
-    }
-    ++count;
-    t += DT;
+    //    const std::filesystem::path output_path =
+    //        std::filesystem::path(__FILE__).parent_path().parent_path() / "bin" / (file_name_vtp + "_"+ std::to_string(count_files) + ".vtp");
+    //        count_files++;
+    //        write_particles_vtu(particles, output_path.string());
+    //  }
+    //  ++count;
+    t += sph::constants().DT;
   }
+  f_time.flush();
 }
