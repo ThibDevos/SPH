@@ -28,8 +28,8 @@ inline SimulationConstants make_simulation_constants(std::size_t particle_count,
                                                     double gravity = 9.81,
                                                     double neighbors_ratio = 1.25,
                                                     double monaghan_factor = 10.0,
-                                                    double cfl_safety = 0.4,
-                                                    double dt_margin = 2.0,
+                                                    double cfl_safety = 0.8,
+                                                    double dt_margin = 1.1,
                                                     double nu = 0.001)
 {
   SimulationConstants constants{};

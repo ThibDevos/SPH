@@ -1,5 +1,5 @@
-#ifndef MORTON
-#define MORTON
+#ifndef MORTON_AoS
+#define MORTON_AoS
 
 #include <algorithm>
 #include <array>
@@ -53,10 +53,10 @@ void radix_sort_indices(std::vector<uint64_t>& codes, std::vector<int>& indices,
 }
 
 template<size_t D>
-class Morton
+class Morton_AoS
 {
   public:
-    Morton(std::vector<Particle<D>> & particles, double h)
+    Morton_AoS(std::vector<Particle<D>> & particles, double h)
     {
       int nb_part = particles.size();
       indices.resize(nb_part);
